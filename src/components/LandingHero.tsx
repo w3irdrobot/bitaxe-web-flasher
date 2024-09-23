@@ -7,14 +7,27 @@ import DeviceSelector from './DeviceSelector'
 import BoardVersionSelector from './BoardVersionSelector'
 import { ESPLoader, Transport, FlashOptions } from 'esptool-js'
 
-const firmwareUrls = {
-  max: '/firmware/max.bin',
-  ultra: '/firmware/esp-miner-factory-205-v2.1.10.bin',
-  supra: '/firmware/supra.bin',
-  gamma: '/firmware/gamma.bin',
-  ultrahex: '/firmware/ultrahex.bin',
-  suprahex: '/firmware/suprahex.bin',
-} as const;
+const firmwareUrls: Record<string, Record<string, string>> = {
+  ultra: {
+    '201': '/firmware/esp-miner-factory-201-v2.1.10.bin',
+    '202': '/firmware/esp-miner-factory-202-v2.1.10.bin',
+    '203': '/firmware/esp-miner-factory-203-v2.1.10.bin',
+    '204': '/firmware/esp-miner-factory-204-v2.1.10.bin',
+    '205': '/firmware/esp-miner-factory-205-v2.1.10.bin',
+  },
+  supra: {
+    '401': '/firmware/esp-miner-factory-401-v2.1.10.bin',
+    '402': '/firmware/esp-miner-factory-402-v2.1.10.bin',
+  },
+  gamma: {
+    '601': '/firmware/esp-miner-factory-601-v2.1.10.bin',
+  },
+  ultrahex: {
+    '302': '/firmware/esp-miner-factory-302-v2.1.10.bin',
+    '303': '/firmware/esp-miner-factory-303-v2.1.10.bin',
+  },
+  // Add other device models and their firmware versions here
+};
 
 type DeviceModel = keyof typeof firmwareUrls;
 
@@ -61,8 +74,8 @@ export default function LandingHero() {
       return
     }
 
-    if (!selectedDevice) {
-      setStatus('Please select a device model first')
+    if (!selectedDevice || !selectedBoardVersion) {
+      setStatus('Please select both device model and board version')
       return
     }
 
@@ -70,7 +83,11 @@ export default function LandingHero() {
     setStatus('Preparing to flash...')
     
     try {
-      const firmwareUrl = firmwareUrls[selectedDevice]
+      const firmwareUrl = firmwareUrls[selectedDevice]?.[selectedBoardVersion]
+      if (!firmwareUrl) {
+        throw new Error('No firmware available for the selected device and board version')
+      }
+
       const firmwareResponse = await fetch(firmwareUrl)
       
       if (!firmwareResponse.ok) {
@@ -88,7 +105,7 @@ export default function LandingHero() {
       const flashOptions: FlashOptions = {
         fileArray: [{
           data: firmwareBinaryString,
-          address: 0 // Set address to 0 as requested
+          address: 0
         }],
         flashSize: "keep",
         flashMode: "keep",
@@ -99,7 +116,6 @@ export default function LandingHero() {
           setStatus(`Flashing: ${Math.round((written / total) * 100)}% complete`)
         },
         calculateMD5Hash: (image) => {
-          // Implement MD5 calculation if needed
           console.log('MD5 calculation not implemented')
           return ''
         },
@@ -125,7 +141,7 @@ export default function LandingHero() {
               Flash Your Bitaxe Directly from the Web
             </h1>
             <p className="mx-auto max-w-[700px] text-gray-500 md:text-xl dark:text-gray-400">
-              Connect your device, select your model, and start flashing immediately. No setup required.
+              Connect your device, select your model and board version, and start flashing immediately. No setup required.
             </p>
           </div>
           <div className="w-full max-w-sm space-y-2">
@@ -137,11 +153,24 @@ export default function LandingHero() {
               {isConnecting ? 'Connecting...' : 'Connect Device'}
               <Usb className="ml-2 h-4 w-4" />
             </Button>
-            <DeviceSelector onValueChange={(value) => setSelectedDevice(value as DeviceModel)} disabled={isConnecting || isFlashing || esploader === null} />
+            <DeviceSelector 
+              onValueChange={(value) => {
+                setSelectedDevice(value as DeviceModel)
+                setSelectedBoardVersion('')
+              }} 
+              disabled={isConnecting || isFlashing || esploader === null} 
+            />
+            {selectedDevice && (
+              <BoardVersionSelector 
+                deviceModel={selectedDevice}
+                onValueChange={setSelectedBoardVersion}
+                disabled={isConnecting || isFlashing }
+              />
+            )}
             <Button 
               className="w-full" 
               onClick={handleStartFlashing}
-              disabled={!selectedDevice || isConnecting || isFlashing || esploader === null}
+              disabled={!selectedDevice || !selectedBoardVersion || isConnecting || isFlashing || esploader === null}
             >
               {isFlashing ? 'Flashing...' : 'Start Flashing'}
               <Zap className="ml-2 h-4 w-4" />
