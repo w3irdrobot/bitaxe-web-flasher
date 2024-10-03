@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import DeviceSelector from './DeviceSelector'
 import BoardVersionSelector from './BoardVersionSelector'
 import { ESPLoader, Transport, FlashOptions } from 'esptool-js'
+import Header from './Header'
+import InstructionPanel from './InstructionPanel'
 
 const firmwareUrls: Record<string, Record<string, string>> = {
   ultra: {
@@ -38,6 +40,7 @@ export default function LandingHero() {
   const [isConnecting, setIsConnecting] = useState(false)
   const [isFlashing, setIsFlashing] = useState(false)
   const [esploader, setEsploader] = useState<ESPLoader | null>(null)
+  const [isPanelOpen, setIsPanelOpen] = useState(false)
 
   const handleConnect = async () => {
     setIsConnecting(true)
@@ -133,52 +136,56 @@ export default function LandingHero() {
   }
 
   return (
-    <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48">
-      <div className="container px-4 md:px-6">
-        <div className="flex flex-col items-center space-y-4 text-center">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
-              Flash Your Bitaxe Directly from the Web
-            </h1>
-            <p className="mx-auto max-w-[700px] text-gray-500 md:text-xl dark:text-gray-400">
-              Connect your device, select your model and board version, and start flashing immediately. No setup required.
-            </p>
-          </div>
-          <div className="w-full max-w-sm space-y-2">
-            <Button 
-              className="w-full" 
-              onClick={handleConnect}
-              disabled={isConnecting || isFlashing || esploader !== null}
-            >
-              {isConnecting ? 'Connecting...' : 'Connect Device'}
-              <Usb className="ml-2 h-4 w-4" />
-            </Button>
-            <DeviceSelector 
-              onValueChange={(value) => {
-                setSelectedDevice(value as DeviceModel)
-                setSelectedBoardVersion('')
-              }} 
-              disabled={isConnecting || isFlashing || esploader === null} 
-            />
-            {selectedDevice && (
-              <BoardVersionSelector 
-                deviceModel={selectedDevice}
-                onValueChange={setSelectedBoardVersion}
-                disabled={isConnecting || isFlashing }
+    <>
+      <Header onOpenPanel={() => setIsPanelOpen(true)} />
+      <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48">
+        <div className="container px-4 md:px-6">
+          <div className="flex flex-col items-center space-y-4 text-center">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
+                Flash Your Bitaxe Directly from the Web
+              </h1>
+              <p className="mx-auto max-w-[700px] text-gray-500 md:text-xl dark:text-gray-400">
+                Connect your device, select your model and board version, and start flashing immediately. No setup required.
+              </p>
+            </div>
+            <div className="w-full max-w-sm space-y-2">
+              <Button 
+                className="w-full" 
+                onClick={handleConnect}
+                disabled={isConnecting || isFlashing || esploader !== null}
+              >
+                {isConnecting ? 'Connecting...' : 'Connect Device'}
+                <Usb className="ml-2 h-4 w-4" />
+              </Button>
+              <DeviceSelector 
+                onValueChange={(value) => {
+                  setSelectedDevice(value as DeviceModel)
+                  setSelectedBoardVersion('')
+                }} 
+                disabled={isConnecting || isFlashing || esploader === null} 
               />
-            )}
-            <Button 
-              className="w-full" 
-              onClick={handleStartFlashing}
-              disabled={!selectedDevice || !selectedBoardVersion || isConnecting || isFlashing || esploader === null}
-            >
-              {isFlashing ? 'Flashing...' : 'Start Flashing'}
-              <Zap className="ml-2 h-4 w-4" />
-            </Button>
-            {status && <p className="mt-2 text-sm font-medium">{status}</p>}
+              {selectedDevice && (
+                <BoardVersionSelector 
+                  deviceModel={selectedDevice}
+                  onValueChange={setSelectedBoardVersion}
+                  disabled={isConnecting || isFlashing }
+                />
+              )}
+              <Button 
+                className="w-full" 
+                onClick={handleStartFlashing}
+                disabled={!selectedDevice || !selectedBoardVersion || isConnecting || isFlashing || esploader === null}
+              >
+                {isFlashing ? 'Flashing...' : 'Start Flashing'}
+                <Zap className="ml-2 h-4 w-4" />
+              </Button>
+              {status && <p className="mt-2 text-sm font-medium">{status}</p>}
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+      <InstructionPanel isOpen={isPanelOpen} onClose={() => setIsPanelOpen(false)} />
+    </>
   )
 }

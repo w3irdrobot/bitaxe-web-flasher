@@ -24,7 +24,6 @@ export default function RootLayout({
       <body className={inter.className}>
         <ClientThemeWrapper>
           <div className="min-h-screen bg-background text-foreground">
-            <Header />
             <main className="w-full p-4">
               {children}
             </main>
