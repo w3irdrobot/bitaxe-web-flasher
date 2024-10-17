@@ -13,11 +13,6 @@ export default function FirmwareFlasher() {
       return;
     }
 
-    if (selectedDevice !== 'ultra') {
-      setFlashStatus('Only Ultra firmware is currently supported');
-      return;
-    }
-
     setFlashStatus('Preparing to flash...');
     
     try {
