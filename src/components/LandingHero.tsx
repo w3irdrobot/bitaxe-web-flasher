@@ -58,6 +58,7 @@ export default function LandingHero() {
       const loader = new ESPLoader({
         transport,
         baudrate: 115200,
+        romBaudrate: 115200,
         terminal: {
           clean: () => {},
           writeLine: (data: string) => console.log(data),
