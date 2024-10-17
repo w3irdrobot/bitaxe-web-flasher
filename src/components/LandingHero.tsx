@@ -10,6 +10,9 @@ import Header from './Header'
 import InstructionPanel from './InstructionPanel'
 
 const firmwareUrls: Record<string, Record<string, string>> = {
+  max: {
+    '102': '/firmware/esp-miner-factory-102-v2.3.0.bin'
+  },
   ultra: {
     '201': '/firmware/esp-miner-factory-201-v2.3.0.bin',
     '202': '/firmware/esp-miner-factory-202-v2.3.0.bin',
