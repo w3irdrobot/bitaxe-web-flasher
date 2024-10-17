@@ -10,7 +10,6 @@ import Header from './Header'
 import InstructionPanel from './InstructionPanel'
 
 import { serial } from "web-serial-polyfill";
-if (!navigator.serial && navigator.usb) navigator.serial = serial;
 
 const firmwareUrls: Record<string, Record<string, string>> = {
   max: {
