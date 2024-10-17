@@ -2,11 +2,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 type DeviceSelectorProps = {
   onValueChange: (value: string) => void
+  disabled?: boolean
 }
 
-export default function DeviceSelector({ onValueChange }: DeviceSelectorProps) {
+export default function DeviceSelector({ onValueChange, disabled }: DeviceSelectorProps) {
   return (
-    <Select onValueChange={onValueChange}>
+    <Select onValueChange={onValueChange} disabled={disabled}>
       <SelectTrigger>
         <SelectValue placeholder="Select your device model" />
       </SelectTrigger>

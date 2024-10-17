@@ -5,9 +5,12 @@ import { ArrowRight, Usb, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import DeviceSelector from './DeviceSelector'
 import BoardVersionSelector from './BoardVersionSelector'
-import { ESPLoader, Transport, FlashOptions } from 'esptool-js'
+import { ESPLoader, LoaderOptions, Transport, FlashOptions } from 'esptool-js'
 import Header from './Header'
 import InstructionPanel from './InstructionPanel'
+
+import { serial } from "web-serial-polyfill";
+if (!navigator.serial && navigator.usb) navigator.serial = serial;
 
 const firmwareUrls: Record<string, Record<string, string>> = {
   max: {
@@ -68,7 +71,8 @@ export default function LandingHero() {
       setStatus('Connected successfully!')
     } catch (error) {
       console.error('Connection failed:', error)
-      setStatus(`Connection failed: ${error.message}`)
+      setStatus(`Connection failed: ${error instanceof Error ? error.message : String(error)}`)
+      // setStatus(`Flashing failed: ${error instanceof Error ? error.message : String(error)}. Please try again.`)
     } finally {
       setIsConnecting(false)
     }
@@ -132,7 +136,8 @@ export default function LandingHero() {
       setStatus('Flashing completed successfully!')
     } catch (error) {
       console.error('Flashing failed:', error)
-      setStatus(`Flashing failed: ${error.message}. Please try again.`)
+      setStatus(`Flashing failed: ${error instanceof Error ? error.message : String(error)}. Please try again.`)
+
     } finally {
       setIsFlashing(false)
     }
