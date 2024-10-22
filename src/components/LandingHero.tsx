@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ArrowRight, Usb, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import DeviceSelector from './DeviceSelector'
@@ -10,6 +10,7 @@ import Header from './Header'
 import InstructionPanel from './InstructionPanel'
 
 import { serial } from "web-serial-polyfill";
+
 
 const firmwareUrls: Record<string, Record<string, string>> = {
   max: {
@@ -46,6 +47,13 @@ export default function LandingHero() {
   const [isFlashing, setIsFlashing] = useState(false)
   const [esploader, setEsploader] = useState<ESPLoader | null>(null)
   const [isPanelOpen, setIsPanelOpen] = useState(false)
+  const [isChromiumBased, setIsChromiumBased] = useState(true)
+
+  useEffect(() => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isChromium = /chrome|chromium|crios|edge/i.test(userAgent);
+    setIsChromiumBased(isChromium);
+  }, []);
 
   const handleConnect = async () => {
     setIsConnecting(true)
@@ -141,6 +149,19 @@ export default function LandingHero() {
     } finally {
       setIsFlashing(false)
     }
+  }
+
+  if (!isChromiumBased) {
+    return (
+      <div className="container px-4 md:px-6 py-12 text-center">
+        <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none mb-4">
+          Browser Compatibility Error
+        </h1>
+        <p className="mx-auto max-w-[700px] text-gray-500 md:text-xl dark:text-gray-400">
+          This application requires a Chromium-based browser (such as Google Chrome, Microsoft Edge, or Brave) to function properly. Please switch to a compatible browser and try again.
+        </p>
+      </div>
+    )
   }
 
   return (
