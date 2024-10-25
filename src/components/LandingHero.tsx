@@ -17,22 +17,22 @@ const firmwareUrls: Record<string, Record<string, string>> = {
     '102': '/firmware/esp-miner-factory-102-v2.3.0.bin'
   },
   ultra: {
-    '201': '/firmware/esp-miner-factory-201-v2.3.0.bin',
-    '202': '/firmware/esp-miner-factory-202-v2.3.0.bin',
-    '203': '/firmware/esp-miner-factory-203-v2.3.0.bin',
-    '204': '/firmware/esp-miner-factory-204-v2.3.0.bin',
-    '205': '/firmware/esp-miner-factory-205-v2.3.0.bin',
+    '201': 'firmware/esp-miner-factory-201-v2.3.0.bin',
+    '202': 'firmware/esp-miner-factory-202-v2.3.0.bin',
+    '203': 'firmware/esp-miner-factory-203-v2.3.0.bin',
+    '204': 'firmware/esp-miner-factory-204-v2.3.0.bin',
+    '205': 'firmware/esp-miner-factory-205-v2.3.0.bin',
   },
   supra: {
     '401': 'firmware/esp-miner-factory-401-v2.3.0.bin',
-    '402': '/firmware/esp-miner-factory-402-v2.3.0.bin',
+    '402': 'firmware/esp-miner-factory-402-v2.3.0.bin',
   },
   gamma: {
-    '601': '/firmware/esp-miner-factory-601-v2.3.0.bin',
+    '601': 'firmware/esp-miner-factory-601-v2.3.0.bin',
   },
   ultrahex: {
-    '302': '/firmware/esp-miner-factory-302-v2.1.0.bin',
-    '303': '/firmware/esp-miner-factory-303-v2.1.0.bin',
+    '302': 'firmware/esp-miner-factory-302-v2.1.0.bin',
+    '303': 'firmware/esp-miner-factory-303-v2.1.0.bin',
   },
   // Add other device models and their firmware versions here
 };
