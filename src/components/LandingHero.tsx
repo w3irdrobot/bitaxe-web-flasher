@@ -24,7 +24,7 @@ const firmwareUrls: Record<string, Record<string, string>> = {
     '205': '/firmware/esp-miner-factory-205-v2.3.0.bin',
   },
   supra: {
-    '401': '/firmware/esp-miner-factory-401-v2.3.0.bin',
+    '401': 'firmware/esp-miner-factory-401-v2.3.0.bin',
     '402': '/firmware/esp-miner-factory-402-v2.3.0.bin',
   },
   gamma: {
