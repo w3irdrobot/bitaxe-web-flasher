@@ -140,8 +140,11 @@ export default function LandingHero() {
       }
       
       await esploader.writeFlash(flashOptions)
-
-      setStatus('Flashing completed successfully!')
+      
+      setStatus('Flashing completed. Restarting device...')
+      await esploader.hardReset()
+      
+      setStatus('Flashing completed successfully! Device has been restarted.')
     } catch (error) {
       console.error('Flashing failed:', error)
       setStatus(`Flashing failed: ${error instanceof Error ? error.message : String(error)}. Please try again.`)
