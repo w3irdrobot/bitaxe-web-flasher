@@ -212,7 +212,7 @@ export default function LandingHero() {
                   setSelectedDevice(value as DeviceModel)
                   setSelectedBoardVersion('')
                 }} 
-                disabled={isConnecting || isFlashing || esploader === null} 
+                disabled={isConnecting || isFlashing || esploader === null || isConnected == false} 
               />
               {selectedDevice && (
                 <BoardVersionSelector 
