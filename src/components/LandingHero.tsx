@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ArrowRight, Usb, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import DeviceSelector from './DeviceSelector'
@@ -44,10 +44,14 @@ export default function LandingHero() {
   const [selectedBoardVersion, setSelectedBoardVersion] = useState('')
   const [status, setStatus] = useState('')
   const [isConnecting, setIsConnecting] = useState(false)
+  const [isConnected, setIsConnected] = useState(false)
   const [isFlashing, setIsFlashing] = useState(false)
   const [esploader, setEsploader] = useState<ESPLoader | null>(null)
   const [isPanelOpen, setIsPanelOpen] = useState(false)
   const [isChromiumBased, setIsChromiumBased] = useState(true)
+  const transportRef = useRef<Transport | null>(null)
+  const loaderRef = useRef<ESPLoader | null>(null)
+
 
   useEffect(() => {
     const userAgent = navigator.userAgent.toLowerCase();
@@ -62,6 +66,7 @@ export default function LandingHero() {
     try {
       const device = await navigator.serial.requestPort({})
       const transport = new Transport(device)
+      transportRef.current = transport
       
       const loader = new ESPLoader({
         transport,
@@ -73,16 +78,28 @@ export default function LandingHero() {
           write: (data: string) => console.log(data),
         },
       })
+      
 
       await loader.main()
       setEsploader(loader)
       setStatus('Connected successfully!')
+      setIsConnected(true)
     } catch (error) {
       console.error('Connection failed:', error)
       setStatus(`Connection failed: ${error instanceof Error ? error.message : String(error)}`)
       // setStatus(`Flashing failed: ${error instanceof Error ? error.message : String(error)}. Please try again.`)
     } finally {
       setIsConnecting(false)
+    }
+  }
+
+  const handleDisconnect = async () => {
+    if (transportRef.current) {
+      await transportRef.current.disconnect()
+      setIsConnected(false)
+      setStatus("")
+      loaderRef.current = null
+      transportRef.current = null
     }
   }
 
@@ -184,10 +201,10 @@ export default function LandingHero() {
             <div className="w-full max-w-sm space-y-2">
               <Button 
                 className="w-full" 
-                onClick={handleConnect}
-                disabled={isConnecting || isFlashing || esploader !== null}
+                onClick={isConnected ? handleDisconnect : handleConnect}
+                disabled={isConnecting || isFlashing }
               >
-                {isConnecting ? 'Connecting...' : 'Connect Device'}
+                {isConnected ? 'Disconnect' : 'Connect'}
                 <Usb className="ml-2 h-4 w-4" />
               </Button>
               <DeviceSelector 
