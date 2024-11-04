@@ -14,7 +14,7 @@ export default function Footer() {
               onClick={() => setShowPrivacy(false)}
               className="absolute right-4 top-4 hover:text-gray-700"
             >
-              <X size={20} />
+              <X size={35} />
             </button>
             <div className="text-center">
               <h2 className="text-lg">Privacy Notice</h2>
