@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { ArrowRight, Usb, Zap } from 'lucide-react'
+import { ArrowRight, ComputerIcon, Usb, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import DeviceSelector from './DeviceSelector'
 import BoardVersionSelector from './BoardVersionSelector'
@@ -9,8 +9,10 @@ import { ESPLoader, LoaderOptions, Transport, FlashOptions } from 'esptool-js'
 import Header from './Header'
 import InstructionPanel from './InstructionPanel'
 
-import { serial } from "web-serial-polyfill";
+import { Terminal } from '@xterm/xterm';
+import '@xterm/xterm/css/xterm.css';
 
+import { serial } from "web-serial-polyfill";
 
 const firmwareUrls: Record<string, Record<string, string>> = {
   max: {
@@ -46,12 +48,16 @@ export default function LandingHero() {
   const [isConnecting, setIsConnecting] = useState(false)
   const [isConnected, setIsConnected] = useState(false)
   const [isFlashing, setIsFlashing] = useState(false)
+  const [isLogging, setIsLogging] = useState(false)
   const [esploader, setEsploader] = useState<ESPLoader | null>(null)
   const [isPanelOpen, setIsPanelOpen] = useState(false)
   const [isChromiumBased, setIsChromiumBased] = useState(true)
   const transportRef = useRef<Transport | null>(null)
+  const serialPortRef = useRef<any>(null)
   const loaderRef = useRef<ESPLoader | null>(null)
-
+  const terminalRef = useRef<Terminal | null>(null)
+  const terminalContainerRef = useRef<HTMLDivElement>(null)
+  const readerRef = useRef<ReadableStreamDefaultReader | null>(null)
 
   useEffect(() => {
     const userAgent = navigator.userAgent.toLowerCase();
@@ -59,24 +65,99 @@ export default function LandingHero() {
     setIsChromiumBased(isChromium);
   }, []);
 
+  useEffect(() => {
+    if (terminalContainerRef.current && !terminalRef.current && isLogging) {
+      const term = new Terminal({ 
+        cols: 80, 
+        rows: 24,
+        theme: {
+          background: '#1a1b26',
+          foreground: '#a9b1d6'
+        }
+      });
+      terminalRef.current = term;
+      term.open(terminalContainerRef.current);
+      term.writeln('Serial logging started...');
+    }
+
+    return () => {
+      if (terminalRef.current) {
+        terminalRef.current.dispose();
+        terminalRef.current = null;
+      }
+    };
+  }, [isLogging]);
+
+  const espLoaderTerminal = {
+    clean(): void {
+      terminalRef.current?.clear();
+    },
+    writeLine(data: string): void {
+      terminalRef.current?.writeln(data);
+    },
+    write(data: string): void {
+      terminalRef.current?.write(data);
+    },
+  };
+
+  const startSerialLogging = async () => {
+    if (!transportRef.current) {
+      setStatus('Please connect to a device first');
+      return;
+    }
+
+    try {
+      setIsLogging(true);
+      
+      // Get the port from the transport
+      const port = serialPortRef.current;
+      
+      // Start reading from the already open port
+      const reader = port.readable.getReader();
+      readerRef.current = reader;
+
+      // Start reading loop
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) {
+          break;
+        }
+        // Convert received data to string and write to terminal
+        const text = new TextDecoder().decode(value);
+        terminalRef.current?.write(text);
+      }
+    } catch (error) {
+      console.error('Serial logging error:', error);
+      setStatus(`Logging error: ${error instanceof Error ? error.message : String(error)}`);
+      setIsLogging(false);
+    }
+  };
+
+  const stopSerialLogging = async () => {
+    if (readerRef.current) {
+      await readerRef.current.cancel();
+      readerRef.current = null;
+    }
+    setIsLogging(false);
+  };
+
   const handleConnect = async () => {
     setIsConnecting(true)
     setStatus('Connecting to device...')
 
     try {
-      const device = await navigator.serial.requestPort({})
-      const transport = new Transport(device)
+      // try to connect to serial Port
+      const port = await navigator.serial.requestPort({})
+      serialPortRef.current = port;
+      const transport = new Transport(port)
       transportRef.current = transport
       
+      // init the ESPLoader with preset configuration and baudrate
       const loader = new ESPLoader({
         transport,
         baudrate: 115200,
         romBaudrate: 115200,
-        terminal: {
-          clean: () => {},
-          writeLine: (data: string) => console.log(data),
-          write: (data: string) => console.log(data),
-        },
+        terminal: espLoaderTerminal,
       })
       
 
@@ -87,19 +168,22 @@ export default function LandingHero() {
     } catch (error) {
       console.error('Connection failed:', error)
       setStatus(`Connection failed: ${error instanceof Error ? error.message : String(error)}`)
-      // setStatus(`Flashing failed: ${error instanceof Error ? error.message : String(error)}. Please try again.`)
     } finally {
       setIsConnecting(false)
     }
   }
 
   const handleDisconnect = async () => {
+    if (isLogging) {
+      await stopSerialLogging();
+    }
     if (transportRef.current) {
       await transportRef.current.disconnect()
       setIsConnected(false)
       setStatus("")
       loaderRef.current = null
       transportRef.current = null
+      serialPortRef.current = null;
     }
   }
 
@@ -229,8 +313,25 @@ export default function LandingHero() {
                 {isFlashing ? 'Flashing...' : 'Start Flashing'}
                 <Zap className="ml-2 h-4 w-4" />
               </Button>
+              <Button 
+                className="w-full" 
+                onClick={isLogging ? stopSerialLogging : startSerialLogging}
+                disabled={!isConnected || isFlashing}
+              >
+                {isLogging ? 'Stop Logging' : 'Start Logging'}
+                <ComputerIcon className="ml-2 h-4 w-4" />
+              </Button>
+              <p className="mx-auto max-w-[400px] text-gray-500 md:text-m dark:text-gray-400">
+                Connect your device, log the serial data and download it later on.
+              </p>
               {status && <p className="mt-2 text-sm font-medium">{status}</p>}
             </div>
+            {isLogging && (
+              <div 
+                ref={terminalContainerRef}
+                className="w-full max-w-4xl h-[400px] bg-black rounded-lg overflow-hidden mt-8 border border-gray-700"
+              />
+            )}
           </div>
         </div>
       </section>

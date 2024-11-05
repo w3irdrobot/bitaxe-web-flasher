@@ -14,6 +14,7 @@
         "@types/node": "20.4.5",
         "@types/react": "18.2.17",
         "@types/react-dom": "18.2.7",
+        "@xterm/xterm": "^5.5.0",
         "class-variance-authority": "^0.7.0",
         "clsx": "^2.0.0",
         "esptool-js": "^0.4.6",
