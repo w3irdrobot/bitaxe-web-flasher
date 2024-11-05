@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { ArrowRight, ComputerIcon, Usb, Zap } from 'lucide-react'
+import { ArrowRight, ComputerIcon, Download, Usb, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import DeviceSelector from './DeviceSelector'
 import BoardVersionSelector from './BoardVersionSelector'
@@ -58,6 +58,7 @@ export default function LandingHero() {
   const terminalRef = useRef<Terminal | null>(null)
   const terminalContainerRef = useRef<HTMLDivElement>(null)
   const readerRef = useRef<ReadableStreamDefaultReader | null>(null)
+  const logsRef = useRef<string>('')
 
   useEffect(() => {
     const userAgent = navigator.userAgent.toLowerCase();
@@ -78,6 +79,7 @@ export default function LandingHero() {
       terminalRef.current = term;
       term.open(terminalContainerRef.current);
       term.writeln('Serial logging started...');
+      logsRef.current = 'Serial logging started...\n';
     }
 
     return () => {
@@ -91,12 +93,15 @@ export default function LandingHero() {
   const espLoaderTerminal = {
     clean(): void {
       terminalRef.current?.clear();
+      logsRef.current = '';
     },
     writeLine(data: string): void {
       terminalRef.current?.writeln(data);
+      logsRef.current += data + '\n';
     },
     write(data: string): void {
       terminalRef.current?.write(data);
+      logsRef.current += data;
     },
   };
 
@@ -125,6 +130,7 @@ export default function LandingHero() {
         // Convert received data to string and write to terminal
         const text = new TextDecoder().decode(value);
         terminalRef.current?.write(text);
+        logsRef.current += text;
       }
     } catch (error) {
       console.error('Serial logging error:', error);
@@ -139,6 +145,19 @@ export default function LandingHero() {
       readerRef.current = null;
     }
     setIsLogging(false);
+  };
+
+  const downloadLogs = () => {
+    const blob = new Blob([logsRef.current], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    a.href = url;
+    a.download = `bitaxe-logs-${timestamp}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
   };
 
   const handleConnect = async () => {
@@ -313,14 +332,24 @@ export default function LandingHero() {
                 {isFlashing ? 'Flashing...' : 'Start Flashing'}
                 <Zap className="ml-2 h-4 w-4" />
               </Button>
-              <Button 
-                className="w-full" 
-                onClick={isLogging ? stopSerialLogging : startSerialLogging}
-                disabled={!isConnected || isFlashing}
-              >
-                {isLogging ? 'Stop Logging' : 'Start Logging'}
-                <ComputerIcon className="ml-2 h-4 w-4" />
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  className="flex-1" 
+                  onClick={isLogging ? stopSerialLogging : startSerialLogging}
+                  disabled={!isConnected || isFlashing}
+                >
+                  {isLogging ? 'Stop Logging' : 'Start Logging'}
+                  <ComputerIcon className="ml-2 h-4 w-4" />
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={downloadLogs}
+                  disabled={!logsRef.current}
+                >
+                  Download Logs
+                  <Download className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
               <p className="mx-auto max-w-[400px] text-gray-500 md:text-m dark:text-gray-400">
                 Connect your device, log the serial data and download it later on.
               </p>
