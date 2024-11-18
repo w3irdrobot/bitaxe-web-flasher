@@ -393,7 +393,7 @@ export default function LandingHero() {
             {isLogging && (
               <div 
                 ref={terminalContainerRef}
-                className="w-full max-w-4xl h-[400px] bg-black rounded-lg overflow-hidden mt-8 border border-gray-700"
+                className="w-full max-w-4xl h-[400px] bg-black rounded-lg overflow-hidden mt-8 border border-gray-700 text-left"
               />
             )}
           </div>
