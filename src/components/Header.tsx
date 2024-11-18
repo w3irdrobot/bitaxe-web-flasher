@@ -18,7 +18,7 @@ export default function Header({ onOpenPanel }: HeaderProps) {
       {/* Middle section */}
       <div className="flex items-center">
         <a 
-          href="https://discord.gg/3E8ca2dkcC"
+          href="https://discord.com/invite/osmu"
           target="_blank"
           rel="noopener noreferrer"
           className="hover:opacity-90 transition-opacity"
