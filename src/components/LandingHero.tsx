@@ -49,15 +49,14 @@ export default function LandingHero() {
   const [isConnected, setIsConnected] = useState(false)
   const [isFlashing, setIsFlashing] = useState(false)
   const [isLogging, setIsLogging] = useState(false)
-  const [esploader, setEsploader] = useState<ESPLoader | null>(null)
   const [isPanelOpen, setIsPanelOpen] = useState(false)
   const [isChromiumBased, setIsChromiumBased] = useState(true)
-  const transportRef = useRef<Transport | null>(null)
   const serialPortRef = useRef<any>(null)
-  const loaderRef = useRef<ESPLoader | null>(null)
   const terminalRef = useRef<Terminal | null>(null)
   const terminalContainerRef = useRef<HTMLDivElement>(null)
   const readerRef = useRef<ReadableStreamDefaultReader | null>(null)
+  const textDecoderRef = useRef<TextDecoderStream | null>(null)
+  const readableStreamClosedRef = useRef<Promise<void> | null>(null)
   const logsRef = useRef<string>('')
 
   useEffect(() => {
@@ -90,61 +89,114 @@ export default function LandingHero() {
     };
   }, [isLogging]);
 
-  const espLoaderTerminal = {
-    clean(): void {
-      terminalRef.current?.clear();
-      logsRef.current = '';
-    },
-    writeLine(data: string): void {
-      terminalRef.current?.writeln(data);
-      logsRef.current += data + '\n';
-    },
-    write(data: string): void {
-      terminalRef.current?.write(data);
-      logsRef.current += data;
-    },
-  };
+  const handleConnect = async () => {
+    setIsConnecting(true)
+    setStatus('Connecting to device...')
+
+    try {
+      const port = await navigator.serial.requestPort()
+      await port.open({ 
+        baudRate: 115200,
+        dataBits: 8,
+        stopBits: 1,
+        parity: 'none',
+        flowControl: 'none'
+      })
+      
+      serialPortRef.current = port
+      setIsConnected(true)
+      setStatus('Connected successfully!')
+    } catch (error) {
+      console.error('Connection failed:', error)
+      setStatus(`Connection failed: ${error instanceof Error ? error.message : String(error)}`)
+    } finally {
+      setIsConnecting(false)
+    }
+  }
+
+  const handleDisconnect = async () => {
+    if (isLogging) {
+      await stopSerialLogging();
+    }
+    try {
+      if (serialPortRef.current?.readable) {
+        await serialPortRef.current.close();
+      }
+      serialPortRef.current = null;
+      setIsConnected(false)
+      setStatus("")
+    } catch (error) {
+      console.error('Disconnect error:', error);
+      setStatus(`Disconnect error: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
 
   const startSerialLogging = async () => {
-    if (!transportRef.current) {
+    if (!serialPortRef.current) {
       setStatus('Please connect to a device first');
       return;
     }
 
     try {
       setIsLogging(true);
-      
-      // Get the port from the transport
       const port = serialPortRef.current;
+
+      // First ensure any existing connections are cleaned up
+      if (readerRef.current) {
+        await readerRef.current.cancel();
+      }
+      if (readableStreamClosedRef.current) {
+        await readableStreamClosedRef.current;
+      }
+
+      // Set up text decoder stream
+      const decoder = new TextDecoderStream();
+      const inputDone = port.readable.pipeTo(decoder.writable);
+      const inputStream = decoder.readable;
+      const reader = inputStream.getReader();
       
-      // Start reading from the already open port
-      const reader = port.readable.getReader();
+      textDecoderRef.current = decoder;
+      readableStreamClosedRef.current = inputDone;
       readerRef.current = reader;
 
-      // Start reading loop
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) {
-          break;
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) {
+            reader.releaseLock();
+            break;
+          }
+          terminalRef.current?.write(value);
+          logsRef.current += value;
         }
-        // Convert received data to string and write to terminal
-        const text = new TextDecoder().decode(value);
-        terminalRef.current?.write(text);
-        logsRef.current += text;
+      } catch (error) {
+        console.error('Error in read loop:', error);
       }
     } catch (error) {
       console.error('Serial logging error:', error);
       setStatus(`Logging error: ${error instanceof Error ? error.message : String(error)}`);
-      setIsLogging(false);
     }
+    setIsLogging(false);
   };
 
   const stopSerialLogging = async () => {
-    if (readerRef.current) {
-      await readerRef.current.cancel();
-      readerRef.current = null;
+    try {
+      if (readerRef.current) {
+        await readerRef.current.cancel();
+        readerRef.current = null;
+      }
+      if (readableStreamClosedRef.current) {
+        await readableStreamClosedRef.current;
+        readableStreamClosedRef.current = null;
+      }
+      if (textDecoderRef.current) {
+        textDecoderRef.current = null;
+      }
+    } catch (error) {
+      console.error('Error stopping serial logging:', error);
+    } finally {
+      setIsLogging(false);
     }
-    setIsLogging(false);
   };
 
   const downloadLogs = () => {
@@ -160,54 +212,8 @@ export default function LandingHero() {
     document.body.removeChild(a);
   };
 
-  const handleConnect = async () => {
-    setIsConnecting(true)
-    setStatus('Connecting to device...')
-
-    try {
-      // try to connect to serial Port
-      const port = await navigator.serial.requestPort({})
-      serialPortRef.current = port;
-      const transport = new Transport(port)
-      transportRef.current = transport
-      
-      // init the ESPLoader with preset configuration and baudrate
-      const loader = new ESPLoader({
-        transport,
-        baudrate: 115200,
-        romBaudrate: 115200,
-        terminal: espLoaderTerminal,
-      })
-      
-
-      await loader.main()
-      setEsploader(loader)
-      setStatus('Connected successfully!')
-      setIsConnected(true)
-    } catch (error) {
-      console.error('Connection failed:', error)
-      setStatus(`Connection failed: ${error instanceof Error ? error.message : String(error)}`)
-    } finally {
-      setIsConnecting(false)
-    }
-  }
-
-  const handleDisconnect = async () => {
-    if (isLogging) {
-      await stopSerialLogging();
-    }
-    if (transportRef.current) {
-      await transportRef.current.disconnect()
-      setIsConnected(false)
-      setStatus("")
-      loaderRef.current = null
-      transportRef.current = null
-      serialPortRef.current = null;
-    }
-  }
-
   const handleStartFlashing = async () => {
-    if (!esploader) {
+    if (!serialPortRef.current) {
       setStatus('Please connect to a device first')
       return
     }
@@ -221,26 +227,52 @@ export default function LandingHero() {
     setStatus('Preparing to flash...')
     
     try {
+      // Stop logging if it's active
+      if (isLogging) {
+        await stopSerialLogging();
+      }
+
+      // Close the current connection
+      if (serialPortRef.current.readable) {
+        await serialPortRef.current.close();
+      }
+
+      // Create transport and ESPLoader for flashing
+      const transport = new Transport(serialPortRef.current);
+      const loader = new ESPLoader({
+        transport,
+        baudrate: 115200,
+        romBaudrate: 115200,
+        terminal: {
+          clean() {},
+          writeLine(data: string) {
+            setStatus(data);
+          },
+          write(data: string) {
+            setStatus(data);
+          },
+        },
+      });
+
+      await loader.main();
+
       const firmwareUrl = firmwareUrls[selectedDevice]?.[selectedBoardVersion]
       if (!firmwareUrl) {
         throw new Error('No firmware available for the selected device and board version')
       }
 
       const firmwareResponse = await fetch(firmwareUrl)
-      
       if (!firmwareResponse.ok) {
         throw new Error('Failed to load firmware file')
       }
       
       const firmwareArrayBuffer = await firmwareResponse.arrayBuffer()
       const firmwareUint8Array = new Uint8Array(firmwareArrayBuffer)
-      
-      // Convert Uint8Array to binary string
       const firmwareBinaryString = Array.from(firmwareUint8Array, (byte) => String.fromCharCode(byte)).join('')
       
       setStatus('Flashing firmware...')
 
-      const flashOptions: FlashOptions = {
+      await loader.writeFlash({
         fileArray: [{
           data: firmwareBinaryString,
           address: 0
@@ -253,22 +285,25 @@ export default function LandingHero() {
         reportProgress: (fileIndex, written, total) => {
           setStatus(`Flashing: ${Math.round((written / total) * 100)}% complete`)
         },
-        calculateMD5Hash: (image) => {
-          console.log('MD5 calculation not implemented')
-          return ''
-        },
-      }
-      
-      await esploader.writeFlash(flashOptions)
+        calculateMD5Hash: () => '',
+      })
       
       setStatus('Flashing completed. Restarting device...')
-      await esploader.hardReset()
+      await loader.hardReset()
+      
+      // Reopen port for normal operation
+      await serialPortRef.current.open({ 
+        baudRate: 115200,
+        dataBits: 8,
+        stopBits: 1,
+        parity: 'none',
+        flowControl: 'none'
+      });
       
       setStatus('Flashing completed successfully! Device has been restarted.')
     } catch (error) {
       console.error('Flashing failed:', error)
       setStatus(`Flashing failed: ${error instanceof Error ? error.message : String(error)}. Please try again.`)
-
     } finally {
       setIsFlashing(false)
     }
@@ -315,7 +350,7 @@ export default function LandingHero() {
                   setSelectedDevice(value as DeviceModel)
                   setSelectedBoardVersion('')
                 }} 
-                disabled={isConnecting || isFlashing || esploader === null || isConnected == false} 
+                disabled={isConnecting || isFlashing || !isConnected} 
               />
               {selectedDevice && (
                 <BoardVersionSelector 
@@ -327,7 +362,7 @@ export default function LandingHero() {
               <Button 
                 className="w-full" 
                 onClick={handleStartFlashing}
-                disabled={!selectedDevice || !selectedBoardVersion || isConnecting || isFlashing || esploader === null}
+                disabled={!selectedDevice || !selectedBoardVersion || isConnecting || isFlashing || !isConnected}
               >
                 {isFlashing ? 'Flashing...' : 'Start Flashing'}
                 <Zap className="ml-2 h-4 w-4" />
