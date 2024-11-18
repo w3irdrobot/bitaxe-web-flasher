@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: 'Bitaxe Web Flasher',
   description: 'Flash your Bitaxe directly from the web',
   icons: {
-    icon: '/pictures/logo.png'
+    icon: 'https://github.com/bitaxeorg/bitaxe-web-flasher/public/pictures/logo.png'
   }
 }
 
