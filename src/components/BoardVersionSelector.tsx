@@ -8,8 +8,8 @@ type BoardVersionSelectorProps = {
 
 const boardVersions: Record<string, string[]> = {
   max: ['102'],
-  ultra: ['201', '202', '204'], // add 203 and 205
-  supra: ['401', '402'],
+  ultra: ['202', '204'], // add 203 and 205
+  supra: ['401', '402', '403'],
   gamma: ['601'],
   //ultrahex: ['302', '303'],
   //suprahex: ['701']
