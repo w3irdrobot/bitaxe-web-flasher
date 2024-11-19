@@ -6,11 +6,19 @@ import Header from '@/components/Header'
 
 const inter = Inter({ subsets: ['latin'] })
 
+const basePath = process.env.NODE_ENV === 'production' ? '/bitaxe-web-flasher' : ''
+
 export const metadata: Metadata = {
   title: 'Bitaxe Web Flasher',
   description: 'Flash your Bitaxe directly from the web',
   icons: {
-    icon: 'https://github.com/bitaxeorg/bitaxe-web-flasher/public/pictures/logo.png'
+    icon: [
+      {
+        url: `${basePath}/pictures/logo.png`,
+        sizes: 'any',
+        type: 'image/png',
+      }
+    ]
   }
 }
 
