@@ -289,15 +289,6 @@ export default function LandingHero() {
       setStatus('Flashing completed. Restarting device...')
       await loader.hardReset()
       
-      // Reopen port for normal operation
-      await serialPortRef.current.open({ 
-        baudRate: 115200,
-        dataBits: 8,
-        stopBits: 1,
-        parity: 'none',
-        flowControl: 'none'
-      });
-      
       setStatus('Flashing completed successfully! Device has been restarted.')
     } catch (error) {
       console.error('Flashing failed:', error)
